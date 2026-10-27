@@ -43,6 +43,7 @@ chase** line naming the expensive dead ends.
 | `Received a incoming packet on unknown teid (…) Dropping!` | [P8 — unknown TEID flood](docs/oai_troubleshooting_testbed.md#p8--unknown-teid-flood) |
 | `cannot find free CCE for Msg2!` | [P9 — cannot find free CCE for Msg2](docs/oai_troubleshooting_testbed.md#p9--cannot-find-free-cce-for-msg2) |
 | `NG Setup failure` | [P10 — NGAP NG Setup failure](docs/oai_troubleshooting_testbed.md#p10--ngap-ng-setup-failure) |
+| `unknown requested DNN …` right after `DNN matched!` (5GSM cause `0x1b`) | [SMF IPv4v6 DNN fix](docs/oai_smf_ipv4v6_dnn_fix.md) |
 
 Two things in that file are worth reading even when nothing is broken: **§1**, which
 records a misdiagnosis that cost the most time (RACH surviving does **not** mean the RX
@@ -59,7 +60,7 @@ instead: the catalogue is indexed by *symptom*, and
 
 ## Repository map
 
-### `docs/` — 13 references
+### `docs/` — 14 references
 
 | File | Purpose |
 |---|---|
@@ -76,6 +77,7 @@ instead: the catalogue is indexed by *symptom*, and
 | [`oai_f1_split_testbed.md`](docs/oai_f1_split_testbed.md) | CU/DU F1 split as deployed here. |
 | [`oai_oru_fronthaul_general.md`](docs/oai_oru_fronthaul_general.md) | O-RAN 7.2x fronthaul and O-DU/O-RU configuration, vendor-neutral. |
 | [`oai_oru_fronthaul_testbed.md`](docs/oai_oru_fronthaul_testbed.md) | 7.2x fronthaul with this lab's Benetel RAN550/RAN650 units. |
+| [`oai_smf_ipv4v6_dnn_fix.md`](docs/oai_smf_ipv4v6_dnn_fix.md) | SMF fix: IPv4v6 PDU session rejected as "unknown requested DNN" (`0x1b`) on an IPv4 DNN. |
 
 ### `configs/` — 20 gNB / UE / O-RU configs
 
