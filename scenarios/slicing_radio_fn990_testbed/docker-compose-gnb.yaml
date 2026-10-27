@@ -1,0 +1,19 @@
+#version: '3.8'
+services:
+    oai-gnb:
+        image: ${REGISTRY:-oaisoftwarealliance}/${GNB_IMG:-oai-gnb}:v2.3.0
+        container_name: oai-gnb
+        privileged: true
+        cap_drop:
+            - ALL
+        environment:
+            USE_ADDITIONAL_OPTIONS: -E --log_config.global_log_options level,nocolor,time
+            ASAN_OPTIONS: detect_leaks=0
+        volumes:
+            - ./gnb/gNB_SA_n78_106PRB.2x2_usrpn310.conf:/opt/oai-gnb/etc/gnb.conf
+        network_mode: "host"
+        healthcheck:
+            test: /bin/bash -c "pgrep nr-softmodem"
+            interval: 10s
+            timeout: 5s
+            retries: 5

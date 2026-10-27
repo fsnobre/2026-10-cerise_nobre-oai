@@ -1,0 +1,180 @@
+diff --git a/oai_cn/oai-cn5g-legacy/conf/config.yaml b/oai_cn/oai-cn5g-legacy/conf/config.yaml
+index a3951fd..b9f3265 100644
+--- a/oai_cn/oai-cn5g-legacy/conf/config.yaml
++++ b/oai_cn/oai-cn5g-legacy/conf/config.yaml
+@@ -30,7 +30,7 @@
+ 
+ # Log level for all the NFs
+ log_level:
+-  general: debug
++  general: info
+ 
+ # If you enable registration, the other NFs will use the NRF discovery mechanism
+ register_nf:
+diff --git a/oai_cn/oai-cn5g-legacy/database/oai_db.sql b/oai_cn/oai-cn5g-legacy/database/oai_db.sql
+index f45d0d5..160c743 100644
+--- a/oai_cn/oai-cn5g-legacy/database/oai_db.sql
++++ b/oai_cn/oai-cn5g-legacy/database/oai_db.sql
+@@ -278,7 +278,7 @@ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singl
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+     ('001010000010776', '00101', '{\"sst\": 1, \"sd\": \"0\"}','{\"oai\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.11\"}]}}');
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+-    ('001010000010777', '00101', '{\"sst\": 1, \"sd\": \"0\"}','{\"oai\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.12\"}]}}');
++    ('001010000010777', '00101', '{\"sst\": 1, \"sd\": \"0x00002\"}','{\"oai2\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.12\"}]}}');
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+     ('001010000010778', '00101', '{\"sst\": 1, \"sd\": \"0\"}','{\"oai\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.13\"}]}}');
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+diff --git a/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml b/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml
+index 75c1118..652f5fe 100644
+--- a/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml
++++ b/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml
+@@ -4,7 +4,7 @@ services:
+         container_name: "mysql"
+         image: mysql:8.0
+         volumes:
+-            - ./database/oai_db.sql:/docker-entrypoint-initdb.d/oai_db.sql
++            - ./database/oai_db2_Felipe.sql:/docker-entrypoint-initdb.d/oai_db.sql
+             - ./healthscripts/mysql-healthcheck.sh:/tmp/mysql-healthcheck.sh
+         environment:
+             - TZ=Europe/Paris
+@@ -237,7 +237,7 @@ services:
+                 ipv4_address: 192.168.70.135
+ networks:
+     public_net:
+-        external: true
++        #external: true
+         driver: bridge
+         name: demo-oai-public-net
+         ipam:
+diff --git a/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c b/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c
+index 3e6ad1c..43664c6 100644
+--- a/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c
++++ b/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c
+@@ -1598,8 +1598,8 @@ static void nr_fr1_dlsch_preprocessor(module_id_t module_id, frame_t frame, sub_
+   nr_slice_preprocess(module_id, frame, slot);
+ 
+   // Slice policy update
+-  // if ((frame & 127) == 0 && slot == 0)
+-  //   nr_update_slice_policy(module_id);
++  if ((frame & 127) == 0 && slot == 0)
++    nr_update_slice_policy(module_id);
+ 
+   int bw = scc->downlinkConfigCommon->frequencyInfoDL->scs_SpecificCarrierList.list.array[0]->carrierBandwidth;
+   int average_agg_level = 4; // TODO find a better estimation
+diff --git a/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf b/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf
+index a8f7858..03f6d6c 100644
+--- a/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf
++++ b/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf
+@@ -39,38 +39,26 @@ gNBs =
+ 
+ # downlinkConfigCommon
+     #frequencyInfoDL
+-      # this is 3301.68 MHz + 22*12*30e-3 MHz = 3309.6
+-      #absoluteFrequencySSB                                          = 620640;
+-      # this is 3300.60 MHz + 53*12*30e-3 MHz = 3319.68
+-      absoluteFrequencySSB                                           = 641280;
+-      # this is 3503.28 MHz + 22*12*30e-3 MHz = 3511.2
+-      #absoluteFrequencySSB                                          = 634080;
+-      # this is 3600.48 MHz
+-      #absoluteFrequencySSB                                          = 640032;
+-      dl_frequencyBand                                              = 78;
+-      # this is 3301.68 MHz
+-      #dl_absoluteFrequencyPointA                                    = 620112;
+-      # this is 3300.60 MHz
+-      dl_absoluteFrequencyPointA                                     = 640008;
+-      # this is 3502.56 MHz
+-      #dl_absoluteFrequencyPointA                                    = 633552;
+-      # this is 3600.48 MHz
+-      #dl_absoluteFrequencyPointA                                    = 640032;
++      absoluteFrequencySSB                                           = 640704;
++      #dl_frequencyBand                                              = 78;
++      dl_absoluteFrequencyPointA                                     = 639996;
+       #scs-SpecificCarrierList
+       dl_offstToCarrier                                              = 0;
+ # subcarrierSpacing
+ # 0=kHz15, 1=kHz30, 2=kHz60, 3=kHz120
+         dl_subcarrierSpacing                                         = 1;
+-        dl_carrierBandwidth                                          = 106;
++        dl_carrierBandwidth                                          = 51;
+      #initialDownlinkBWP
+       #genericParameters
+         # this is RBstart=0,L=106 (275*(L-1))+RBstart
+-        initialDLBWPlocationAndBandwidth                             = 28875;
++        initialDLBWPlocationAndBandwidth                             = 13750; 
++        #28875;
+ # subcarrierSpacing
+ # 0=kHz15, 1=kHz30, 2=kHz60, 3=kHz120
+         initialDLBWPsubcarrierSpacing                                = 1;
+       #pdcch-ConfigCommon
+         initialDLBWPcontrolResourceSetZero                           = 12;
++        #12;
+         initialDLBWPsearchSpaceZero                                  = 0;
+ 
+ 
+@@ -79,15 +67,16 @@ gNBs =
+      #frequencyInfoUL
+       ul_frequencyBand                                               = 78;
+       #scs-SpecificCarrierList
+-      ul_offstToCarrier                                              = 0;
++      #ul_offstToCarrier                                              = 0;
+ # subcarrierSpacing
+ # 0=kHz15, 1=kHz30, 2=kHz60, 3=kHz120
+       ul_subcarrierSpacing                                           = 1;
+-      ul_carrierBandwidth                                            = 106;
+-      pMax                                                           = 20;
++      ul_carrierBandwidth                                            = 51;
++      #pMax                                                           = 20;
+      #initialUplinkBWP
+       #genericParameters
+-        initialULBWPlocationAndBandwidth                             = 28875;
++        initialULBWPlocationAndBandwidth                             = 13750; 
++        #28875;
+ # subcarrierSpacing
+ # 0=kHz15, 1=kHz30, 2=kHz60, 3=kHz120
+         initialULBWPsubcarrierSpacing                                = 1;
+@@ -164,11 +153,11 @@ gNBs =
+       # 0=ms0p5, 1=ms0p625, 2=ms1, 3=ms1p25, 4=ms2, 5=ms2p5, 6=ms5, 7=ms10
+       dl_UL_TransmissionPeriodicity                                  = 6;
+       nrofDownlinkSlots                                              = 7;
+-      nrofDownlinkSymbols                                            = 6;
++      nrofDownlinkSymbols                                            = 10;
+       nrofUplinkSlots                                                = 2;
+-      nrofUplinkSymbols                                              = 4;
++      nrofUplinkSymbols                                              = 2;
+ 
+-      ssPBCH_BlockPower                                              = -25;
++      #ssPBCH_BlockPower                                              = -25;
+   }
+ 
+   );
+@@ -184,9 +173,9 @@ gNBs =
+ 
+     ////////// AMF parameters:
+     amf_ip_address      = ( { ipv4       = "192.168.70.132";
+-                              ipv6       = "192:168:30::17";
+-                              active     = "yes";
+-                              preference = "ipv4";
++                              #ipv6       = "192:168:30::17";
++                              #active     = "yes";
++                              #preference = "ipv4";
+                             }
+                           );
+ 
+@@ -209,7 +198,7 @@ MACRLCs = (
+   pusch_TargetSNRx10 = 200;
+   pucch_TargetSNRx10 = 200;
+   ulsch_max_frame_inactivity = 1;
+-  SliceConf = "/home/wineslab/ORANSlice/rrmPolicy.json";
++  SliceConf = "/home/nobre/oranslice2/ORANSlice/rrmPolicy.json";
+ }
+ );
+ 
+@@ -246,7 +235,7 @@ RUs = (
+   #sdr_addrs = "mgmt_addr=172.21.19.14,addr=192.168.10.2,second_addr=192.168.20.2,clock_source=internal,time_source=internal"
+   #sdr_addrs      = "type=x300";
+   #clock_src = "internal";
+-  sdr_addrs = "type=x300, addr=192.168.40.2,clock_source=internal,time_source=internal"
++  sdr_addrs = "type=x300, addr=192.168.40.3,clock_source=internal,time_source=internal"
+   tx_subdev = "B:0";
+   rx_subdev = "B:0";
+ }

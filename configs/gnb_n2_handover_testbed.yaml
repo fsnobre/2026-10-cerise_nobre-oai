@@ -1,0 +1,54 @@
+# =============================================================================
+# Delta Config: N2 Handover — Both gNBs (no Xn)
+# =============================================================================
+# BASE: gnb_annotated.yaml
+# This shows params added/changed on EACH gNB for N2-only inter-gNB HO.
+# The only difference from the Xn configs is the ABSENCE of gNB_XnAPConfig.
+# Everything else (measurement config, neighbor list, timers) is identical.
+#
+# Apply this delta to BOTH WS-gnb1 and WS-gnb2.
+# On each gNB, update gNB_ID, nr_cellid, physCellId, and network IPs
+# to their respective values (same as Xn configs).
+# =============================================================================
+
+gNBs:
+  - gNB_ID: 0xe00              # WS-gnb1: 0xe00 / WS-gnb2: 0xe01 (must differ)
+    nr_cellid: 12345678         # WS-gnb1: 12345678 / WS-gnb2: 12345679 (must differ)
+    # ... (all other base parameters) ...
+
+    servingCellConfigCommon:
+      - physCellId: 0           # WS-gnb1: 0 / WS-gnb2: 1 (must differ)
+        # ... (all other serving cell params) ...
+
+    # Measurement config — same as Xn case
+    do_MeasurementConfig: 1
+    measurement_events:
+      - A3
+    A3_event:
+      a3Offset: 4
+      hysteresis: 2
+      timeToTrigger: 160
+      reportAmount: 1
+      reportOnLeave: 0
+
+    # Neighbor — each gNB points to the other's cell
+    # WS-gnb1: physCellId=1, absoluteFrequencySSB=640704
+    # WS-gnb2: physCellId=0, absoluteFrequencySSB=640704
+    neighbour_cell_configuration:
+      - physCellId: 1           # WS-gnb1 lists WS-gnb2; WS-gnb2 lists WS-gnb1
+        absoluteFrequencySSB: 640704
+        dl_subcarrierSpacing: 1
+        dl_frequencyBand: 78
+
+    # N2 HO timers — slightly longer than Xn to account for AMF round-trip
+    T304: 2000
+    T_Relocprep: 1000           # N2-specific: source waits this long for HandoverCommand
+    T_RelocOverall: 10000       # N2-specific: overall HO timer
+    T310: 1000
+    N310: 6
+    N311: 2
+
+# gNB_XnAPConfig: ABSENT — this is what makes it N2-only.
+# Without this block, OAI will use N2 for all inter-gNB HO.
+
+# All other blocks (MACRLCs, L1s, RUs, THREAD_STRUCT, security) unchanged.

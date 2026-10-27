@@ -1,0 +1,78 @@
+# =============================================================================
+# Delta Config: RIC-Triggered Handover (Testbed)
+# =============================================================================
+# BASE: gnb_annotated.yaml (or gnb_xn_gnb1_testbed.yaml for inter-gNB RIC HO)
+# HOST: WS-gnb1 (monolithic, E2 agent toward WS-FlexRIC)
+#
+# Changes from base config:
+#   [RIC-1]  E2 agent network interface added
+#   [RIC-2]  e2_agent block added (near_ric_ip_addr, sm_dir, e2ap_version)
+#   [RIC-3]  do_MeasurementConfig: 1 (needed for KPM to report RSRP)
+#   [RIC-4]  A3 parameters set high (disable autonomous HO — RIC takes control)
+#   [RIC-5]  neighbour_cell_configuration required for RIC to resolve target
+#
+# For RIC-only mode: set a3Offset to 28 (14 dB) — autonomousHO effectively disabled.
+# For RIC + A3 fallback: set normal a3Offset (4-6) — xApp acts first, A3 as backup.
+# =============================================================================
+
+gNBs:
+  - gNB_ID: 0xe00
+    # ... (all other base parameters) ...
+
+    # [RIC-3] Enable measurement config so gNB provides RSRP to KPM xApp
+    do_MeasurementConfig: 1
+
+    measurement_events:
+      - A3
+
+    # [RIC-4] RIC-only mode: set a3Offset very high to disable autonomous A3 trigger.
+    # All HO decisions will come from the xApp via E2SM-RC Control.
+    # Change to a3Offset: 4 for RIC + A3 fallback mode.
+    A3_event:
+      a3Offset: 28          # [RIC-4] 14 dB — autonomous A3 effectively disabled
+                            # Change to 4 for "RIC + A3 fallback" mode
+      hysteresis: 2
+      timeToTrigger: 160
+      reportAmount: 1
+      reportOnLeave: 0
+
+    # [RIC-5] Neighbor cells — required for RIC to resolve target nrPCI → cell config
+    # Same structure as Xn/N2 configs.
+    neighbour_cell_configuration:
+      - physCellId: 1
+        absoluteFrequencySSB: 640704
+        dl_subcarrierSpacing: 1
+        dl_frequencyBand: 78
+
+    T304: 2000
+    T310: 1000
+    N310: 6
+    N311: 2
+
+    # [RIC-1] E2 agent network interface — added to NETWORK_INTERFACES
+    NETWORK_INTERFACES:
+      GNB_INTERFACE_NAME_FOR_NG_AMF: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NG_AMF: 192.168.70.129
+      GNB_INTERFACE_NAME_FOR_NGU: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NGU: 192.168.70.129
+      GNB_PORT_FOR_S1U: 2152
+      GNB_IPV4_ADDRESS_FOR_E2: 192.168.70.129   # [RIC-1] E2 toward WS-FlexRIC
+
+# -------------------------------------------------------------------------
+# [RIC-2] E2 AGENT CONFIGURATION — NEW BLOCK
+# Connects the gNB E2 agent to FlexRIC nearRT-RIC.
+# near_ric_ip_addr: WS-FlexRIC IP
+# sm_dir: directory containing KPM and RC service model .so libraries
+# e2ap_version: must match FlexRIC build (check CMakeCache.txt on FlexRIC host)
+# -------------------------------------------------------------------------
+e2_agent:
+  near_ric_ip_addr: 192.168.70.131    # WS-FlexRIC IP. E2 SCTP on port 36421.
+  sm_dir: /usr/local/lib/flexric/     # Path to libkpm_sm.so, librc_sm.so, etc.
+                                      # Built by: cmake .. -DXAPP_MULTILANGUAGE=OFF
+                                      #           make install
+  e2ap_version: E2AP_V2              # Must match FlexRIC E2AP_VERSION in CMakeCache.txt.
+                                     # Check: grep E2AP_VERSION /path/to/flexric/build/CMakeCache.txt
+                                     # Options: E2AP_V1, E2AP_V2, E2AP_V3
+
+# All other blocks (MACRLCs, L1s, RUs, THREAD_STRUCT, security) unchanged.
+# For inter-gNB RIC-triggered HO, also add gNB_XnAPConfig from gnb_xn_gnb1_testbed.yaml.

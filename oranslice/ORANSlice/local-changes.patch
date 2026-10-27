@@ -1,0 +1,80 @@
+diff --git a/oai_cn/oai-cn5g-legacy/conf/config.yaml b/oai_cn/oai-cn5g-legacy/conf/config.yaml
+index a3951fd..b9f3265 100644
+--- a/oai_cn/oai-cn5g-legacy/conf/config.yaml
++++ b/oai_cn/oai-cn5g-legacy/conf/config.yaml
+@@ -30,7 +30,7 @@
+ 
+ # Log level for all the NFs
+ log_level:
+-  general: debug
++  general: info
+ 
+ # If you enable registration, the other NFs will use the NRF discovery mechanism
+ register_nf:
+diff --git a/oai_cn/oai-cn5g-legacy/database/oai_db.sql b/oai_cn/oai-cn5g-legacy/database/oai_db.sql
+index f45d0d5..160c743 100644
+--- a/oai_cn/oai-cn5g-legacy/database/oai_db.sql
++++ b/oai_cn/oai-cn5g-legacy/database/oai_db.sql
+@@ -278,7 +278,7 @@ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singl
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+     ('001010000010776', '00101', '{\"sst\": 1, \"sd\": \"0\"}','{\"oai\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.11\"}]}}');
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+-    ('001010000010777', '00101', '{\"sst\": 1, \"sd\": \"0\"}','{\"oai\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.12\"}]}}');
++    ('001010000010777', '00101', '{\"sst\": 1, \"sd\": \"0x00002\"}','{\"oai2\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.12\"}]}}');
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+     ('001010000010778', '00101', '{\"sst\": 1, \"sd\": \"0\"}','{\"oai\":{\"pduSessionTypes\":{ \"defaultSessionType\": \"IPV4\"},\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"},\"5gQosProfile\": {\"5qi\": 6,\"arp\":{\"priorityLevel\": 1,\"preemptCap\": \"NOT_PREEMPT\",\"preemptVuln\":\"NOT_PREEMPTABLE\"},\"priorityLevel\":1},\"sessionAmbr\":{\"uplink\":\"1000Mbps\", \"downlink\":\"1000Mbps\"},\"staticIpAddress\":[{\"ipv4Addr\": \"12.1.1.13\"}]}}');
+ INSERT INTO `SessionManagementSubscriptionData` (`ueid`, `servingPlmnid`, `singleNssai`, `dnnConfigurations`) VALUES
+diff --git a/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml b/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml
+index 75c1118..ef3d7af 100644
+--- a/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml
++++ b/oai_cn/oai-cn5g-legacy/docker-compose-legacy.yml
+@@ -237,7 +237,7 @@ services:
+                 ipv4_address: 192.168.70.135
+ networks:
+     public_net:
+-        external: true
++        #external: true
+         driver: bridge
+         name: demo-oai-public-net
+         ipam:
+diff --git a/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c b/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c
+index 3e6ad1c..43664c6 100644
+--- a/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c
++++ b/oai_ran/openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c
+@@ -1598,8 +1598,8 @@ static void nr_fr1_dlsch_preprocessor(module_id_t module_id, frame_t frame, sub_
+   nr_slice_preprocess(module_id, frame, slot);
+ 
+   // Slice policy update
+-  // if ((frame & 127) == 0 && slot == 0)
+-  //   nr_update_slice_policy(module_id);
++  if ((frame & 127) == 0 && slot == 0)
++    nr_update_slice_policy(module_id);
+ 
+   int bw = scc->downlinkConfigCommon->frequencyInfoDL->scs_SpecificCarrierList.list.array[0]->carrierBandwidth;
+   int average_agg_level = 4; // TODO find a better estimation
+diff --git a/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf b/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf
+index a8f7858..b18b4ad 100644
+--- a/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf
++++ b/oai_ran/targets/PROJECTS/GENERIC-NR-5GC/CONF/ORANSlice.gnb.sa.band78.fr1.106PRB.usrpx310.conf
+@@ -209,7 +209,8 @@ MACRLCs = (
+   pusch_TargetSNRx10 = 200;
+   pucch_TargetSNRx10 = 200;
+   ulsch_max_frame_inactivity = 1;
+-  SliceConf = "/home/wineslab/ORANSlice/rrmPolicy.json";
++ # SliceConf = "/home/wineslab/ORANSlice/rrmPolicy.json";
++  SliceConf = "/home/MarcosDeSousa/ORANSlice/rrmPolicy.json";
+ }
+ );
+ 
+@@ -231,8 +232,9 @@ RUs = (
+   att_tx         = 0
+   att_rx         = 0;
+   bands          = [78];
+-  max_pdschReferenceSignalPower = -27;
+-  max_rxgain                    = 114;
++  max_pdschReferenceSignalPower = -21;
++  max_rxgain                    = 100;
++  max_txgain			= 200;
+   eNB_instances  = [0];
+   ##beamforming 1x2 matrix: 1 layer x 2 antennas
+   # bf_weights = [0x00007fff, 0x0000];

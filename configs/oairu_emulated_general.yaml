@@ -1,0 +1,76 @@
+# =============================================================================
+# oairu Emulated O-RU Configuration — General Template
+# =============================================================================
+# oairu is OAI's software O-RU emulator. It implements the O-RAN 7.2x
+# C/U-Plane protocol toward an O-DU and processes IQ samples in software.
+#
+# oairu must be started BEFORE nr-softmodem (O-DU).
+# The O-DU sends C-Plane first; oairu must be listening.
+#
+# Deployment options:
+#   Option A: oairu on separate host (WS-gnb1) connected via Ethernet to O-DU (WS-gnb2)
+#   Option B: oairu on same host as O-DU (WS-gnb2) using a veth pair
+#
+# For Option B (veth), create the pair first:
+#   sudo ip link add veth-odu type veth peer name veth-ru
+#   sudo ip link set veth-odu up
+#   sudo ip link set veth-ru up
+#   # O-DU uses veth-odu MAC in fh_conf.du_addr
+#   # oairu uses veth-ru MAC in oran_cfg.ru_addr
+# =============================================================================
+
+# =============================================================================
+# oairu is configured differently from nr-softmodem — it uses a simpler
+# flat config or command-line arguments. The structure below reflects
+# OAI's oairu YAML format as of the develop branch.
+# Verify against your build's oairu --help output.
+# =============================================================================
+
+# O-RAN fronthaul addresses
+oran_cfg:
+  # MAC address of the O-DU fronthaul NIC (or veth-odu).
+  # Must match fh_conf.du_addr in the O-DU config exactly. [Group N]
+  du_addr: <ODU_NIC_OR_VETH_MAC>
+
+  # MAC address of this oairu NIC (or veth-ru).
+  # Must match fh_conf.ru_addr in the O-DU config exactly. [Group N]
+  ru_addr: <OAIRU_NIC_OR_VETH_MAC>
+
+  # Network interface oairu listens on.
+  # Separate host: physical NIC facing O-DU (e.g. enp3s0)
+  # veth loopback:  veth-ru
+  io_if: <OAIRU_IFACE>
+
+  # MTU — must match O-DU fh_conf.mtu_size. [Group Q]
+  mtu: 9000
+
+  # IQ compression — must match O-DU ru_config settings. [Group M]
+  # For emulator testing: no compression (method=0, width=16).
+  compr_meth: 0                   # 0=none. Must match O-DU dl/ul_compr_meth.
+  compr_iq_bitwidth: 16           # Must match O-DU dl/ul_compr_iq_bitwidth.
+
+  # Number of antennas — must match O-DU nb_tx/nb_rx. [Group O]
+  nb_tx: 1
+  nb_rx: 1
+
+  # CPU core for oairu I/O thread.
+  # On separate host: any available core.
+  # On same host as O-DU: use a different core than O-DU's io_core and thread-pool.
+  io_core: 2
+
+  # Timing — oairu free-running mode (no PTP required).
+  # These should be generous to avoid emulator timing violations.
+  T2a_max_up: 1000
+  T2a_min_up: 25
+  Ta3_max: 1000
+  Ta3_min: 25
+
+# Cell configuration — must match O-DU servingCellConfigCommon.
+cell_cfg:
+  # These tell oairu which frequency/bandwidth to emulate.
+  # Must be consistent with O-DU cell config.
+  dl_arfcn: <NR-ARFCN>            # absoluteFrequencySSB in O-DU config
+  dl_bw: <MHz>                     # Channel bandwidth in MHz (e.g. 40)
+  scs: 30                          # Subcarrier spacing in kHz
+  band: <band>                     # NR band (e.g. 78)
+  physCellId: 0                    # Must match O-DU physCellId

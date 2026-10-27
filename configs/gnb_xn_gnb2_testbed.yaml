@@ -1,0 +1,116 @@
+# =============================================================================
+# Delta Config: Xn Handover — WS-gnb2 (Target gNB)
+# =============================================================================
+# BASE: gnb_annotated.yaml (monolithic, Band 78, 106 PRB)
+# HOST: WS-gnb2 (192.168.70.130 on demo-oai)
+# PEER: WS-gnb1 (192.168.70.129 on demo-oai)
+#
+# Key difference from WS-gnb1 config:
+#   gNB_ID = 0xe01     (must differ from WS-gnb1's 0xe00)
+#   nr_cellid differs  (must be unique)
+#   physCellId = 1     (must differ from WS-gnb1's 0)
+#   gNB_XnAPConfig peers WS-gnb1 (reversed from WS-gnb1 config)
+# =============================================================================
+
+gNBs:
+  - gNB_ID: 0xe01              # [Group U] Must differ from WS-gnb1 (0xe00).
+    gNB_name: gnb-ws-gnb2
+    tracking_area_code: 1      # Can be same TAC or different — must be accepted by AMF.
+    nr_cellid: 12345679         # [Group U] Must differ from WS-gnb1 (12345678).
+
+    # All network interface addresses — WS-gnb2's own IPs
+    amf_ip_address:
+      - ipv4: 192.168.70.132   # Same AMF as WS-gnb1
+
+    NETWORK_INTERFACES:
+      GNB_INTERFACE_NAME_FOR_NG_AMF: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NG_AMF: 192.168.70.130   # WS-gnb2 IP on demo-oai
+      GNB_INTERFACE_NAME_FOR_NGU: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NGU: 192.168.70.130
+      GNB_PORT_FOR_S1U: 2152
+
+    servingCellConfigCommon:
+      - physCellId: 1           # [Group U] Must differ from WS-gnb1 (0).
+        absoluteFrequencySSB: 640704   # WS-gnb2 frequency (same band, can differ)
+        dl_absoluteFrequencyPointA: 639996
+        dl_offstToCarrier: 0
+        dl_subcarrierSpacing: 1
+        dl_carrierBandwidth: 106
+        initialDLBWPlocationAndBandwidth: 28875
+        initialDLBWPsubcarrierSpacing: 1
+        initialDLBWPcontrolResourceSetZero: 12
+        initialDLBWPsearchSpaceZero: 0
+        ul_frequencyBand: 78
+        ul_offstToCarrier: 0
+        ul_subcarrierSpacing: 1
+        ul_carrierBandwidth: 106
+        pMax: 20
+        initialULBWPlocationAndBandwidth: 28875
+        initialULBWPsubcarrierSpacing: 1
+        prach_ConfigurationIndex: 98
+        prach_msg1_FDM: 0
+        prach_msg1_FrequencyStart: 0
+        zeroCorrelationZoneConfig: 13
+        preambleReceivedTargetPower: -96
+        preambleTransMax: 6
+        powerRampingStep: 1
+        ra_ResponseWindow: 10
+        ra_ContentionResolutionTimer: 7
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR: 4
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB: 14
+        prach_RootSequenceIndex_PR: 2
+        prach_RootSequenceIndex: 1
+        msg1_SubcarrierSpacing: 1
+        restrictedSetConfig: 0
+        msg3_DeltaPreamble: 1
+        p0_NominalWithGrant: -90
+        pucchGroupHopping: 0
+        hoppingId: 40
+        p0_nominal: -90
+        ssb_PositionsInBurst_PR: 2
+        ssb_PositionsInBurst_Bitmap: 1
+        ssb_periodicityServingCell: 2
+        dmrs_TypeA_Position: 0
+        subcarrierSpacing: 1
+        referenceSubcarrierSpacing: 1
+        dl_UL_TransmissionPeriodicity: 6
+        nrofDownlinkSlots: 7
+        nrofDownlinkSymbols: 6
+        nrofUplinkSlots: 2
+        nrofUplinkSymbols: 4
+        ssPBCH_BlockPower: -25
+
+    # Measurement config — mirrors WS-gnb1 (bidirectional HO support)
+    do_MeasurementConfig: 1
+    measurement_events:
+      - A3
+    A3_event:
+      a3Offset: 4
+      hysteresis: 2
+      timeToTrigger: 160
+      reportAmount: 1
+      reportOnLeave: 0
+
+    # Neighbor = WS-gnb1's cell
+    neighbour_cell_configuration:
+      - physCellId: 0                     # WS-gnb1 cell physCellId
+        absoluteFrequencySSB: 640704      # WS-gnb1 SSB ARFCN
+        dl_subcarrierSpacing: 1
+        dl_frequencyBand: 78
+
+    T304: 2000
+    T310: 1000
+    N310: 6
+    N311: 2
+
+# Xn peer config — reversed from WS-gnb1
+gNB_XnAPConfig:
+  gNB_IP_address:
+    - ipv4: 192.168.70.129      # WS-gnb1 IP on demo-oai
+  gNB_ID:
+    - 0xe00                     # WS-gnb1 gNB_ID
+  SCTP_INSTREAMS: 2
+  SCTP_OUTSTREAMS: 2
+
+# RUs — WS-gnb2's USRP X310 (same addr as original gnb_annotated.yaml)
+# MACRLCs, L1s, THREAD_STRUCT, security — same as base config

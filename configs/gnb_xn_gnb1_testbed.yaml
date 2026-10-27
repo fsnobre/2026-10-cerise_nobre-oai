@@ -1,0 +1,73 @@
+# =============================================================================
+# Delta Config: Xn Handover — WS-gnb1 (Source gNB)
+# =============================================================================
+# BASE: gnb_annotated.yaml (monolithic, Band 78, 106 PRB)
+# HOST: WS-gnb1 (192.168.70.129 on demo-oai)
+# PEER: WS-gnb2 (192.168.70.130 on demo-oai)
+#
+# Changes from base config:
+#   [XN-1]  gNB_ID: 0xe00 (WS-gnb1 — must be unique)
+#   [XN-2]  gNB_XnAPConfig block added
+#   [XN-3]  do_MeasurementConfig + A3 parameters added
+#   [XN-4]  neighbour_cell_configuration points to WS-gnb2's cell
+#   [XN-5]  HO timers added
+# =============================================================================
+
+gNBs:
+  - gNB_ID: 0xe00              # [XN-1] WS-gnb1 gNB ID. Must differ from WS-gnb2.
+    gNB_name: gnb-ws-gnb1
+    nr_cellid: 12345678         # Must differ from WS-gnb2 nr_cellid.
+    # ... (all other base parameters unchanged) ...
+
+    # physCellId for WS-gnb1's cell
+    servingCellConfigCommon:
+      - physCellId: 0           # WS-gnb1 cell. Must differ from WS-gnb2 (physCellId=1).
+        absoluteFrequencySSB: 640704   # WS-gnb1 frequency
+        # ... (all other serving cell params from base config) ...
+
+    # -------------------------------------------------------------------------
+    # [XN-3] MEASUREMENT CONFIG — same structure as intra-gNB
+    # neighbour points to WS-gnb2's cell
+    # -------------------------------------------------------------------------
+    do_MeasurementConfig: 1
+
+    measurement_events:
+      - A3
+
+    A3_event:
+      a3Offset: 4           # 2 dB. Reduce if WS-gnb1 and WS-gnb2 cells are similar RSRP.
+      hysteresis: 2         # 1 dB.
+      timeToTrigger: 160    # ms.
+      reportAmount: 1
+      reportOnLeave: 0
+
+    # [XN-4] Neighbor = WS-gnb2's cell
+    neighbour_cell_configuration:
+      - physCellId: 1                     # WS-gnb2 cell physCellId
+        absoluteFrequencySSB: 640704      # WS-gnb2 SSB ARFCN (same or different frequency)
+        dl_subcarrierSpacing: 1
+        dl_frequencyBand: 78
+
+    # [XN-5] HO timers
+    T304: 2000
+    T310: 1000
+    N310: 6
+    N311: 2
+
+# -------------------------------------------------------------------------
+# [XN-2] Xn CONFIGURATION — NEW BLOCK (absent in monolithic base config)
+# Lists peer gNBs for Xn SCTP association.
+# WS-gnb1 lists WS-gnb2 as peer; WS-gnb2 lists WS-gnb1.
+# Both must have SCTP loaded: sudo modprobe sctp
+# -------------------------------------------------------------------------
+gNB_XnAPConfig:
+  gNB_IP_address:
+    - ipv4: 192.168.70.130      # WS-gnb2 IP on demo-oai (N2 interface).
+                                # Use dedicated Xn NIC IP if available.
+  gNB_ID:
+    - 0xe01                     # WS-gnb2 gNB_ID. Must match WS-gnb2's actual gNB_ID.
+  SCTP_INSTREAMS: 2
+  SCTP_OUTSTREAMS: 2
+  # sctp_port: 38422            # Optional: default is 38422 (3GPP TS 38.422)
+
+# MACRLCs, L1s, RUs, THREAD_STRUCT, security — unchanged from base config

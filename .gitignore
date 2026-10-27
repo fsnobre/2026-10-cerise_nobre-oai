@@ -1,0 +1,63 @@
+
+# --- local Python/uv/conda artifacts ---
+.venv/
+venv/
+env/
+ENV/
+
+# uv local migration scratch files
+.uv-migration/
+_uv_migration_*/
+*.pre-uv-*/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# packaging/build outputs
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# local env/config files
+.env
+.env.*
+!.env.example
+
+# Conda/local environment artifacts
+.conda/
+conda-meta/
+
+# --- Diagnostic collector output ---
+# Contains real hardware identifiers (IMEI, USRP/modem serials, hostnames, MAC
+# addresses, container logs). Never commit it; scrub before sharing.
+#
+# Patterns are unanchored on purpose: every collector accepts --out-parent, so
+# output can land in any subdirectory. Comments must stay on their own lines —
+# git treats a trailing '#' as part of the pattern.
+#
+# One entry per collector:
+#   fn990_diag_*/            collect_fn990.sh
+#   flexric_diag_*/          collect_flexric_diag.sh
+#   oai_cn_diag_*/           collect_oai_cn_diag.sh
+#   oai_gnb_diag_*/          collect_oai_gnb_diag.sh
+#   oai_workstation_diag_*/  collect_oai_workstation_diag.sh
+fn990_diag_*/
+flexric_diag_*/
+oai_cn_diag_*/
+oai_gnb_diag_*/
+oai_workstation_diag_*/
+
+# Catch-all for any future collector following the <name>_diag_<timestamp> scheme.
+*_diag_*/
+
+# All collectors except collect_fn990.sh also tar the directory alongside it.
+*_diag_*.tar.gz

@@ -1,0 +1,6 @@
+Cópia do repositório cerise_nobre/oai (commit 2a4ae3a) preparada como evidência para o relatório CERISE (out/2026).
+
+Removido desta cópia:
+- As chaves de assinante Ki/OPc que não são padrão foram trocadas por <KI_REMOVIDO> e <OPC_REMOVIDO> em scenarios/*/gnb/nr-ue.conf e scenarios/*/database/oai_db2.sql. O prefixo citado em oranslice/README.md também foi removido.
+
+O restante é idêntico ao repositório.

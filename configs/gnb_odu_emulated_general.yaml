@@ -1,0 +1,198 @@
+# =============================================================================
+# OAI O-DU Configuration — oairu Emulated O-RU (General Template)
+# =============================================================================
+# O-DU configured for the OAI oairu software emulator instead of real hardware.
+# Use this for: validating fronthaul config before Benetel arrives,
+#               testing without PTP, CI/CD pipelines.
+#
+# Differences vs Benetel config:
+#   [EMU-1]  dl/ul_compr_meth = 0  (no compression — emulator uses raw IQ)
+#   [EMU-2]  dl/ul_compr_iq_bitwidth = 16  (full 16-bit IQ)
+#   [EMU-3]  Timing windows relaxed  (no PTP, higher jitter in software)
+#   [EMU-4]  ru_addr = oairu host/veth MAC  (not real Benetel MAC)
+#   [EMU-5]  No PTP prerequisites  (oairu runs free-running)
+#   [EMU-6]  nb_tx/nb_rx = 1  (emulator default is SISO — change to 4 if needed)
+#
+# oairu must be started BEFORE nr-softmodem.
+# =============================================================================
+
+Active_gNBs:
+  - gnb-odu-emu
+Asn1_verbosity: none
+
+gNBs:
+  - gNB_ID: <hex>
+    gNB_name: gnb-odu-emu
+    tracking_area_code: <TAC>
+    nr_cellid: <cellid>
+
+    plmn_list:
+      - mcc: <MCC>
+        mnc: <MNC>
+        mnc_length: 2
+        snssaiList:
+          - sst: 1
+            sd: 0x00001
+
+    min_rxtxtime: 6
+
+    # [EMU-6] oairu default is SISO (1T1R). Change to 4 to emulate 4T4R.
+    pdsch_AntennaPorts: 1           # [EMU-6] Match oairu antenna configuration.
+    pusch_AntennaPorts_XP: 1        # [EMU-6]
+    do_SRS: 1
+    do_CSIRS: 1
+
+    servingCellConfigCommon:
+      - physCellId: 0
+        absoluteFrequencySSB: <NR-ARFCN>
+        dl_absoluteFrequencyPointA: <NR-ARFCN>
+        dl_offstToCarrier: 0
+        dl_subcarrierSpacing: 1
+        dl_carrierBandwidth: <RBs>
+        initialDLBWPlocationAndBandwidth: <val>
+        initialDLBWPsubcarrierSpacing: 1
+        initialDLBWPcontrolResourceSetZero: 12
+        initialDLBWPsearchSpaceZero: 0
+        ul_frequencyBand: <band>
+        ul_offstToCarrier: 0
+        ul_subcarrierSpacing: 1
+        ul_carrierBandwidth: <RBs>
+        pMax: 20
+        initialULBWPlocationAndBandwidth: <val>
+        initialULBWPsubcarrierSpacing: 1
+        prach_ConfigurationIndex: 98
+        prach_msg1_FDM: 0
+        prach_msg1_FrequencyStart: 0
+        zeroCorrelationZoneConfig: 13
+        preambleReceivedTargetPower: -96
+        preambleTransMax: 6
+        powerRampingStep: 1
+        ra_ResponseWindow: 10
+        ra_ContentionResolutionTimer: 7
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR: 4
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB: 14
+        prach_RootSequenceIndex_PR: 2
+        prach_RootSequenceIndex: 1
+        msg1_SubcarrierSpacing: 1
+        restrictedSetConfig: 0
+        msg3_DeltaPreamble: 1
+        p0_NominalWithGrant: -90
+        pucchGroupHopping: 0
+        hoppingId: 40
+        p0_nominal: -90
+        ssb_PositionsInBurst_PR: 2
+        ssb_PositionsInBurst_Bitmap: 1
+        ssb_periodicityServingCell: 2
+        dmrs_TypeA_Position: 0
+        subcarrierSpacing: 1
+        referenceSubcarrierSpacing: 1
+        dl_UL_TransmissionPeriodicity: 6
+        nrofDownlinkSlots: 7
+        nrofDownlinkSymbols: 6
+        nrofUplinkSlots: 2
+        nrofUplinkSymbols: 4
+        ssPBCH_BlockPower: -25
+
+    SCTP:
+      SCTP_INSTREAMS: 2
+      SCTP_OUTSTREAMS: 2
+
+    amf_ip_address:
+      - ipv4: <AMF_IP>
+
+    NETWORK_INTERFACES:
+      GNB_INTERFACE_NAME_FOR_NG_AMF: <iface>
+      GNB_IPV4_ADDRESS_FOR_NG_AMF: <ODU_N2_IP>
+      GNB_INTERFACE_NAME_FOR_NGU: <iface>
+      GNB_IPV4_ADDRESS_FOR_NGU: <ODU_N3_IP>
+      GNB_PORT_FOR_S1U: 2152
+
+MACRLCs:
+  - tr_s_preference: local_L1
+    tr_n_preference: local_RRC
+    pusch_TargetSNRx10: 200
+    pucch_TargetSNRx10: 200
+    ul_prbblack_SNR_threshold: 10
+    ulsch_max_frame_inactivity: 5
+
+L1s:
+  - tr_n_preference: local_mac
+    prach_dtx_threshold: 120
+    pucch0_dtx_threshold: 100
+    odfm_offset_divisor: 8
+    pusch_proc_threads: 4           # Emulator is less demanding than real O-RU.
+
+RUs:
+  - local_rf: no
+    nb_tx: 1                        # [EMU-6] Match oairu config.
+    nb_rx: 1                        # [EMU-6]
+    att_tx: 0
+    att_rx: 0
+    bands: [78]
+    max_pdschReferenceSignalPower: -27
+    max_rxgain: 75
+    eNB_instances: [0]
+
+    ru_config:
+      ru_type: oai_oran
+
+      # [EMU-1] [EMU-2] No compression for oairu emulator.
+      # Group M: must match oairu config (both sides must use same compression).
+      dl_compr_meth: 0              # [EMU-1] 0=none. Benetel uses 1 (BFP).
+      dl_compr_iq_bitwidth: 16      # [EMU-2] Full 16-bit IQ. Benetel uses 9.
+      ul_compr_meth: 0              # [EMU-1]
+      ul_compr_iq_bitwidth: 16      # [EMU-2]
+      prach_compr_meth: 0
+      prach_compr_iq_bitwidth: 16
+      dl_compr_bias_compensation: 0
+      ul_compr_bias_compensation: 0
+
+    fh_conf:
+      # Group N: use actual NIC/veth MACs.
+      # Separate host:  du_addr = O-DU NIC MAC, ru_addr = oairu host NIC MAC
+      # veth loopback:  du_addr = veth-odu MAC,  ru_addr = veth-ru MAC
+      du_addr: <ODU_NIC_OR_VETH_MAC>   # Group N: O-DU side MAC
+      ru_addr: <OAIRU_NIC_OR_VETH_MAC> # Group N: oairu side MAC
+
+      mtu_size: 9000
+      vlan_tag_strip: 0
+      io_core: 4
+      io_sleep: 0
+      io_worker: 1
+
+      # [EMU-3] Relaxed timing windows for software emulator.
+      # oairu has no real-time RF constraints but software scheduling adds jitter.
+      # These values provide generous windows for emulated operation.
+      T1a_max_up: 1000              # [EMU-3] Much wider than Benetel (430/500).
+      T1a_min_up: 50
+      T1a_max_cp_dl: 1000
+      T1a_min_cp_dl: 50
+      T2a_max_up: 1000
+      T2a_min_up: 25
+      T2a_max_cp_dl: 1000
+      T2a_min_cp_dl: 25
+      Ta3_max: 1000
+      Ta3_min: 25
+      T4a_max: 1000
+      T4a_min: 25
+
+THREAD_STRUCT:
+  - parallel_config: PARALLEL_RU_L1_TRX_SPLIT
+    worker_config: WORKER_ENABLE
+
+security:
+  ciphering_algorithms: [nea0]
+  integrity_algorithms: [nia2, nia0]
+  drb_ciphering: yes
+  drb_integrity: no
+
+log_config:
+  global_log_level: info
+  hw_log_level: info
+  phy_log_level: info
+  mac_log_level: info
+  rlc_log_level: info
+  pdcp_log_level: info
+  rrc_log_level: info
+  ngap_log_level: debug
+  f1ap_log_level: info

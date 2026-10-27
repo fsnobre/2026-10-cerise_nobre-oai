@@ -1,0 +1,166 @@
+# =============================================================================
+# OAI gNB CU Configuration — Testbed Specific
+# =============================================================================
+# Host:        WS-gnb1 (192.168.70.129 on demo-oai, 192.168.80.1 on F1 link)
+# Connects to: AMF at 192.168.70.132 (WS-CN demo-oai bridge)
+# F1 toward:   WS-gnb2 (DU) at 192.168.80.2
+# Stack:       OAI develop + ORANSlice NVS + FlexRIC E2 agent
+# Band:        78 · 40 MHz · 30 kHz SCS · 106 PRB
+# =============================================================================
+
+Active_gNBs:
+  - gnb-cu
+Asn1_verbosity: none
+
+gNBs:
+  - gNB_ID: 0xe00
+    gNB_name: gnb-cu
+    tracking_area_code: 1
+    nr_cellid: 12345678
+
+    plmn_list:
+      - mcc: 001
+        mnc: 01
+        mnc_length: 2
+        snssaiList:
+          - sst: 1
+            sd: 0x00001
+          - sst: 1
+            sd: 0x000002
+
+    min_rxtxtime: 6
+    do_SRS: 1
+    do_CSIRS: 1
+    pdsch_AntennaPorts: 1
+    pusch_AntennaPorts_XP: 1
+
+    servingCellConfigCommon:
+      - physCellId: 0
+        absoluteFrequencySSB: 640704
+        dl_absoluteFrequencyPointA: 639996
+        dl_offstToCarrier: 0
+        dl_subcarrierSpacing: 1
+        dl_carrierBandwidth: 106            # Group A: matches locationAndBandwidth=28875
+        initialDLBWPlocationAndBandwidth: 28875   # 275*(106-1)+0
+        initialDLBWPsubcarrierSpacing: 1    # Group B
+        initialDLBWPcontrolResourceSetZero: 12
+        initialDLBWPsearchSpaceZero: 0
+        ul_frequencyBand: 78
+        ul_offstToCarrier: 0
+        ul_subcarrierSpacing: 1             # Group B
+        ul_carrierBandwidth: 106            # Group A: equals DL (TDD)
+        pMax: 20
+        initialULBWPlocationAndBandwidth: 28875
+        initialULBWPsubcarrierSpacing: 1    # Group B
+        prach_ConfigurationIndex: 98
+        prach_msg1_FDM: 0
+        prach_msg1_FrequencyStart: 0
+        zeroCorrelationZoneConfig: 13
+        preambleReceivedTargetPower: -96
+        preambleTransMax: 6
+        powerRampingStep: 1
+        ra_ResponseWindow: 10               # Recommended: default 4 too tight for X310 OTA
+        ra_ContentionResolutionTimer: 7
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR: 4
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB: 14
+        prach_RootSequenceIndex_PR: 2
+        prach_RootSequenceIndex: 1
+        msg1_SubcarrierSpacing: 1           # Group B
+        restrictedSetConfig: 0
+        msg3_DeltaPreamble: 1
+        p0_NominalWithGrant: -90
+        pucchGroupHopping: 0
+        hoppingId: 40
+        p0_nominal: -90
+        ssb_PositionsInBurst_PR: 2          # Group E: Band 78 = FR1 3-6 GHz
+        ssb_PositionsInBurst_Bitmap: 1
+        ssb_periodicityServingCell: 2
+        dmrs_TypeA_Position: 0
+        subcarrierSpacing: 1                # Group B
+        referenceSubcarrierSpacing: 1       # Group B
+        dl_UL_TransmissionPeriodicity: 6
+        nrofDownlinkSlots: 7
+        nrofDownlinkSymbols: 6              # Group C: 6+4+4=14 ✓
+        nrofUplinkSlots: 2
+        nrofUplinkSymbols: 4               # Group C: 7+1+2=10 slots ✓
+        ssPBCH_BlockPower: -25
+
+    SCTP:
+      SCTP_INSTREAMS: 2
+      SCTP_OUTSTREAMS: 2
+
+    amf_ip_address:
+      - ipv4: 192.168.70.132              # AMF on WS-CN demo-oai bridge
+
+    NETWORK_INTERFACES:
+      GNB_INTERFACE_NAME_FOR_NG_AMF: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NG_AMF: 192.168.70.129   # WS-gnb1 on demo-oai
+      GNB_INTERFACE_NAME_FOR_NGU: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NGU: 192.168.70.129
+      GNB_PORT_FOR_S1U: 2152
+
+# =============================================================================
+# F1AP: CU listens on the F1 link interface (192.168.80.1)
+# NOT on the demo-oai interface — keep F1 and N2/N3 on separate interfaces.
+# =============================================================================
+F1AP:
+  CU_F1AP_IP_ADDRESS: 192.168.80.1    # WS-gnb1 F1 link NIC. DU (WS-gnb2) connects here.
+  CU_PORT: 38472                       # Standard F1AP SCTP port.
+
+MACRLCs:
+  - tr_s_preference: f1               # [SPLIT-1] F1 toward DU on WS-gnb2
+    tr_n_preference: local_RRC
+
+    # F1-U GTP-U transport — Group J: must mirror DU MACRLCs exactly
+    local_s_address: 192.168.80.1     # CU F1-U IP (WS-gnb1 F1 link NIC)
+    remote_s_address: 192.168.80.2    # DU F1-U IP (WS-gnb2 F1 link NIC)
+    local_s_portc: 500
+    local_s_portd: 2152
+    remote_s_portc: 500
+    remote_s_portd: 2152
+
+    pusch_TargetSNRx10: 200
+    pucch_TargetSNRx10: 200
+    ul_prbblack_SNR_threshold: 10
+    ulsch_max_frame_inactivity: 5
+    SliceConf: "/home/nobre/oranslice2/ORANSlice/rrmPolicy.json"   # NVS scheduler on CU
+
+L1s:
+  - tr_n_preference: local_mac        # Group I: stub L1 on CU side
+    prach_dtx_threshold: 120
+    pucch0_dtx_threshold: 100
+    odfm_offset_divisor: 8
+    # pusch_proc_threads: not needed on CU
+
+RUs:
+  - local_rf: no                      # [SPLIT-4] No RF on WS-gnb1
+    nb_tx: 1
+    nb_rx: 1
+    att_tx: 0
+    att_rx: 0
+    bands: [78]
+    max_pdschReferenceSignalPower: -27
+    max_rxgain: 75
+    eNB_instances: [0]
+    # sdr_addrs: ABSENT — no USRP on WS-gnb1
+
+THREAD_STRUCT:
+  - parallel_config: PARALLEL_SINGLE_THREAD   # CU: no real-time PHY
+    worker_config: WORKER_ENABLE
+
+security:
+  ciphering_algorithms: [nea0]
+  integrity_algorithms: [nia2, nia0]
+  drb_ciphering: yes
+  drb_integrity: no
+
+log_config:
+  global_log_level: info
+  hw_log_level: info
+  phy_log_level: info
+  mac_log_level: info
+  rlc_log_level: info
+  pdcp_log_level: info
+  rrc_log_level: info
+  ngap_log_level: debug
+  f1ap_log_level: debug

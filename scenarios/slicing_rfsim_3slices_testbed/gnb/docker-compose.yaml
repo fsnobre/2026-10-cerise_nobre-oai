@@ -1,0 +1,34 @@
+services:
+    oai-gnb:
+        image: ${REGISTRY:-oaisoftwarealliance}/${GNB_IMG:-oai-gnb}:v2.3.0
+        container_name: oai-gnb
+        privileged: true
+        cap_drop:
+            - ALL
+        environment:
+            USE_ADDITIONAL_OPTIONS: -E --log_config.global_log_options level,nocolor,time --rfsim
+            ASAN_OPTIONS: detect_leaks=0
+        volumes:
+            - ./gNB_SA_n78_106PRB.2x2_usrpn310.conf:/opt/oai-gnb/etc/gnb.conf
+        network_mode: "host"
+        # networks:
+        #     public_net:
+        #         ipv4_address: 192.168.71.140
+        # ports:
+        #     - "9090:9090/tcp"  # Mapeia a porta 9090 do host para a 9090 do contêiner (Telnet)
+        #     - "9091:9091/tcp"  # Mapeia a porta 9091 do host para a 9091 do contêiner (Web)
+        #     - "2152:2152/udp"
+        healthcheck:
+            test: /bin/bash -c "pgrep nr-softmodem"
+            interval: 10s
+            timeout: 5s
+            retries: 5
+# networks:
+#     public_net:
+#         driver: bridge
+#         name: rfsim5g-oai-public-net
+#         ipam:
+#             config:
+#                 - subnet: 192.168.71.128/26
+#         driver_opts:
+#             com.docker.network.bridge.name: "rfsim5g-public"

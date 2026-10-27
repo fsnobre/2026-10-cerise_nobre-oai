@@ -1,0 +1,450 @@
+# =============================================================================
+# ORANSlice gNB Configuration — Band 78, 30 kHz SCS, 106 PRB, USRP X310
+# =============================================================================
+# YAML format. For ORANSlice (older nr-softmodem), use gnb_annotated.conf.
+# This file is the YAML equivalent, kept in sync for reference and for use
+# with newer OAI builds that support YAML.
+#
+# KEY FIXES vs. original ORANSlice_gnb_sa_band78_fr1_106PRB_usrpx310.conf:
+#   [FIX-1]  dl/ul_carrierBandwidth: 51 → 106  (was wrong, causes RRC malform)
+#   [FIX-2]  initialDL/ULBWPlocationAndBandwidth: 13750 → 28875  (encodes L=106)
+#   [FIX-3]  ra_ResponseWindow = 4  (ORANSlice uses enum index: 4 = sl10 = 10 slots
+#            at 30 kHz SCS = 5 ms window. Value "10" is rejected by ORANSlice parser
+#            which expects enum index 0-7, not the slot count.)
+#   [FIX-4]  ssPBCH_BlockPower set to -25 (was commented out)
+#   [FIX-5]  att_tx/att_rx: 0 for OTA (non-zero only with physical attenuators)
+#   [FIX-6]  sdr_addrs: type=x300 prefix + explicit clock_source/time_source
+#   [FIX-7]  SliceConf added to MACRLCs (required for ORANSlice NVS scheduler)
+#   [FIX-8]  pusch_proc_threads: 8
+#   [FIX-9]  THREAD_STRUCT: PARALLEL_RU_L1_SPLIT (was PARALLEL_SINGLE_THREAD)
+#   [FIX-10] NETWORK_INTERFACES: explicit interface names and testbed IPs
+#   [FIX-11] do_SRS and do_CSIRS explicitly set to 1
+#   [FIX-12] nrofDownlinkSymbols: 10→6, nrofUplinkSymbols: 2→4 (4-symbol guard)
+#   [FIX-13] ul_prbblack_SNR_threshold added to MACRLCs
+#   [FIX-14] odfm_offset_divisor added to L1s
+#   [FIX-15] max_rxgain: 114→75 (114 risks ADC saturation on SBX Band 78)
+#   [FIX-16] Corrected antenna port parameter names to match ORANSlice naming:
+#            pdsch_AntennaPorts_XP = 1  (DL, ORANSlice name)
+#            pusch_AntennaPorts    = 1  (UL, ORANSlice name)
+#            Previous version had these swapped.
+# =============================================================================
+
+# Which gNB entries in the list below are active.
+Active_gNBs:
+  - gnb
+
+# Controls verbosity of ASN.1 encoding/decoding traces.
+# Useful values: none | info | annoying
+Asn1_verbosity: none
+
+# =============================================================================
+# SECTION 1: gNB IDENTITY & CORE CONNECTIVITY
+# =============================================================================
+gNBs:
+  - gNB_ID: 0xe00        # 20-bit gNB identity (hex). Must match AMF config.
+    gNB_name: gnb         # Human-readable name. Must match Active_gNBs entry.
+    tracking_area_code: 1 # TAC. Must match what the AMF is configured with.
+
+    # PLMN and slice list.
+    # MCC=001, MNC=01 is the standard test PLMN. Each snssai entry declares a
+    # slice this gNB supports. The AMF will only accept UEs whose S-NSSAI
+    # matches one of these. For ORANSlice: add one entry per slice in rrmPolicy.json.
+    plmn_list:
+      - mcc: 1             # Written as integer 1 (= 001 in PLMN encoding).
+        mnc: 1             # Written as integer 1 (= 01 in PLMN encoding).
+        mnc_length: 2
+        snssaiList:
+          - sst: 1
+            sd: 0x00001
+          - sst: 1
+            sd: 0x000002
+
+    # 36-bit NR Cell Identity. Globally unique when combined with PLMN.
+    nr_cellid: 12345678
+
+    # -------------------------------------------------------------------------
+    # Physical layer parameters (gNB-level, not cell-specific)
+    # -------------------------------------------------------------------------
+
+    # Minimum time (in slots) between reception of UL frame and DL response.
+    # At 30 kHz SCS, 1 slot = 0.5 ms. 6 slots = 3 ms.
+    # Use 6 for 10 GbE X310 (XG FPGA image). Increase to 8 for 1 GbE (HG image).
+    min_rxtxtime: 6
+
+    # SRS: enables UL channel sounding for CSI feedback and beam management.
+    do_SRS: 1      # [FIX-11]
+
+    # CSI-RS: DL reference signal for UE channel quality feedback (CQI/PMI/RI).
+    do_CSIRS: 1    # [FIX-11]
+
+    # [FIX-16] ORANSlice naming: pdsch_AntennaPorts_XP for DL, pusch_AntennaPorts for UL.
+    # Previous version had these swapped, which silently disables antenna config.
+    pdsch_AntennaPorts_XP: 1   # DL antenna ports (ORANSlice naming). 1 = SISO.
+    pusch_AntennaPorts: 1      # UL antenna ports (ORANSlice naming). 1 = SISO.
+
+    # =========================================================================
+    # SECTION 2: SERVING CELL CONFIG COMMON  (3GPP TS 38.331 §6.3.2)
+    # These parameters are broadcast in SIB1 and used by all UEs to camp on
+    # the cell. Getting these wrong prevents any UE from attaching.
+    # =========================================================================
+    servingCellConfigCommon:
+      - physCellId: 0   # Physical Cell ID (0..1007). Must be unique per cell.
+
+        # -----------------------------------------------------------------------
+        # 2a. DOWNLINK FREQUENCY CONFIGURATION
+        # -----------------------------------------------------------------------
+
+        # SSB (Synchronization Signal Block) center frequency in NR-ARFCN.
+        # 640704 → 3319.20 MHz (Band 78, 40 MHz channel @ 3300 MHz base).
+        # Formula: F_REF = 3000 + 0.015 × (ARFCN − 600000)
+        absoluteFrequencySSB: 640704
+
+        # Point A frequency in NR-ARFCN (lowest subcarrier of lowest RB).
+        # Point A is the reference for all frequency-domain resource allocation.
+        # 639996 → 3300.60 MHz
+        dl_absoluteFrequencyPointA: 639996
+
+        # Offset from Point A to first subcarrier of the carrier. Usually 0.
+        dl_offstToCarrier: 0
+
+        # Subcarrier spacing for the DL carrier.
+        # 0=15kHz  1=30kHz  2=60kHz  3=120kHz
+        # 30 kHz is standard for FR1 NR TDD in sub-6 GHz (Band 78).
+        dl_subcarrierSpacing: 1
+
+        # Number of RBs in the DL carrier (SCS-SpecificCarrier).
+        # [FIX-1] Must match the BWP L value below. For 40 MHz @ 30 kHz SCS: 106.
+        # Original had 51 (20 MHz), causing UE RRC malformation.
+        dl_carrierBandwidth: 106    # [FIX-1] was: 51
+
+        # -----------------------------------------------------------------------
+        # 2b. INITIAL DOWNLINK BWP
+        # -----------------------------------------------------------------------
+
+        # Encodes {RBstart, L} as: 275*(L-1) + RBstart
+        # L=106, RBstart=0 → 275*105 + 0 = 28875   ← 106-PRB BWP (correct)
+        # L=51,  RBstart=0 → 275*50  + 0 = 13750   ← 51-PRB BWP  (WRONG)
+        # [FIX-2] Original had 13750 → UEs constrained to 20 MHz.
+        initialDLBWPlocationAndBandwidth: 28875   # [FIX-2] was: 13750
+
+        # SCS for the initial DL BWP. Must match dl_subcarrierSpacing.
+        initialDLBWPsubcarrierSpacing: 1
+
+        # CORESET#0 index (TS 38.213 Table 13-1). Value 12 valid for 30 kHz / 106 PRBs.
+        initialDLBWPcontrolResourceSetZero: 12
+
+        # Search Space #0 index (TS 38.213 Table 13-11). Default 0 is correct.
+        initialDLBWPsearchSpaceZero: 0
+
+        # -----------------------------------------------------------------------
+        # 2c. UPLINK FREQUENCY CONFIGURATION
+        # -----------------------------------------------------------------------
+
+        # Band 78 is TDD: UL and DL share the same frequency range.
+        ul_frequencyBand: 78
+
+        ul_offstToCarrier: 0
+
+        # SCS for the UL carrier. Must match dl_subcarrierSpacing for TDD.
+        ul_subcarrierSpacing: 1
+
+        # Number of RBs in the UL carrier.
+        # [FIX-1] Must equal dl_carrierBandwidth for TDD.
+        ul_carrierBandwidth: 106    # [FIX-1] was: 51
+
+        # Maximum UE TX power in dBm (pMax). 20 dBm = 100 mW.
+        pMax: 20
+
+        # -----------------------------------------------------------------------
+        # 2d. INITIAL UPLINK BWP
+        # -----------------------------------------------------------------------
+
+        # [FIX-2] Same fix as DL BWP. Must match ul_carrierBandwidth.
+        initialULBWPlocationAndBandwidth: 28875   # [FIX-2] was: 13750
+
+        initialULBWPsubcarrierSpacing: 1
+
+        # -----------------------------------------------------------------------
+        # 2e. RACH CONFIGURATION  (3GPP TS 38.331 §6.3.2 — RACH-ConfigCommon)
+        # The Random Access procedure is how UEs first contact the gNB (Msg1-4).
+        # Misconfiguration here is the #1 cause of OTA attach failures.
+        # -----------------------------------------------------------------------
+
+        # PRACH configuration index (TS 38.211 Table 6.3.3.2-2).
+        # Index 98: format B4, suitable for TDD at 30 kHz SCS.
+        prach_ConfigurationIndex: 98
+
+        # PRACH frequency-domain occasions per slot. 0=one 1=two 2=four 3=eight
+        prach_msg1_FDM: 0
+
+        # Starting PRB for PRACH (offset from Point A).
+        prach_msg1_FrequencyStart: 0
+
+        # Zadoff-Chu zero-correlation zone. 13 supports ~1.5 km cell radius.
+        zeroCorrelationZoneConfig: 13
+
+        # Target received preamble power at gNB (dBm). UE ramps TX toward this.
+        preambleReceivedTargetPower: -96
+
+        # Max preamble transmissions before RA failure.
+        # (0..10) = (3,4,5,6,7,8,10,20,50,100,200). Value 6 = 8 attempts.
+        preambleTransMax: 6
+
+        # TX power ramp per retry. 0=0dB  1=2dB  2=4dB  3=6dB
+        powerRampingStep: 1
+
+        # RA response window.
+        # [FIX-3] ORANSlice parser expects enum index (0..7), NOT slot count.
+        # Enum: 0=sl1, 1=sl2, 2=sl4, 3=sl8, 4=sl10, 5=sl20, 6=sl40, 7=sl80
+        # Value 4 = sl10 = 10 slots at 30 kHz SCS = 5 ms window.
+        # Using "10" (slot count) causes OAI to abort at config validation.
+        ra_ResponseWindow: 4        # [FIX-3] enum index 4 = sl10 = 5 ms window
+
+        # SSBs per RACH occasion and CB preambles per SSB.
+        # PR=4 means one SSB per RACH occasion (1:1 mapping).
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR: 4
+
+        # CB preambles per SSB. (0..15) → 4,8,12,...,64. Value 14 = 60 preambles.
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB: 14
+
+        # Contention resolution timer (Msg4 deadline).
+        # (0..7) = 8,16,24,32,40,48,56,64 ms. Value 7 = 64 ms.
+        ra_ContentionResolutionTimer: 7
+
+        # RSRP threshold for SSB selection by the UE.
+        rsrp_ThresholdSSB: 19
+
+        # Preamble root sequence format. 1=L839 (long), 2=L139 (short/NR FR1).
+        prach_RootSequenceIndex_PR: 2
+
+        # Root sequence starting index. Valid range for PR=2: 0-137.
+        prach_RootSequenceIndex: 1
+
+        # SCS for Msg1 preamble. At 30 kHz data SCS, Msg1 SCS = 30 kHz.
+        msg1_SubcarrierSpacing: 1
+
+        # Restricted set for high-speed. 0=unrestricted (normal lab use).
+        restrictedSetConfig: 0
+
+        # Msg3 power offset vs preamble (dB). Positive = Msg3 is boosted.
+        msg3_DeltaPreamble: 1
+
+        # Nominal P0 for PUSCH power control baseline (dBm).
+        p0_NominalWithGrant: -90
+
+        # -----------------------------------------------------------------------
+        # 2f. PUCCH CONFIGURATION
+        # -----------------------------------------------------------------------
+
+        # PUCCH group hopping. 0=none  1=group  2=sequence
+        pucchGroupHopping: 0
+
+        # Cell-specific hopping ID for PUCCH sequence generation.
+        hoppingId: 40
+
+        # Nominal P0 for PUCCH power control (dBm).
+        p0_nominal: -90
+
+        # -----------------------------------------------------------------------
+        # 2g. SSB CONFIGURATION
+        # -----------------------------------------------------------------------
+
+        # SSB burst bitmap. Bit 0 (MSB) = SSB index 0. Value 1 = only SSB #0 active.
+        ssb_PositionsInBurst_Bitmap: 1
+
+        # Qualifies the bitmap length.
+        # 1=short (1 SSB, FR1 below 3 GHz)
+        # 2=medium (4 SSBs, FR1 3-6 GHz — correct for Band 78)
+        # 3=long (8/64 SSBs, FR2)
+        ssb_PositionsInBurst_PR: 2
+
+        # SSB transmission periodicity.
+        # 0=5ms  1=10ms  2=20ms  3=40ms  4=80ms  5=160ms
+        ssb_periodicityServingCell: 2
+
+        # DMRS type A position (first DMRS symbol in slot). 0=symbol2  1=symbol3
+        dmrs_TypeA_Position: 0
+
+        # Cell-level SCS. Must match dl_subcarrierSpacing.
+        subcarrierSpacing: 1
+
+        # SCS reference for TDD pattern. Must match dl_subcarrierSpacing.
+        referenceSubcarrierSpacing: 1
+
+        # -----------------------------------------------------------------------
+        # 2h. TDD UL/DL CONFIGURATION  (3GPP TS 38.331 §6.3.2)
+        # All nodes in the cell must use the same pattern.
+        # -----------------------------------------------------------------------
+
+        # TDD period. 0=0.5ms 1=0.625ms 2=1ms 3=1.25ms 4=2ms 5=2.5ms 6=5ms 7=10ms
+        # Value 6 = 5 ms → 10 slots per period at 30 kHz SCS.
+        dl_UL_TransmissionPeriodicity: 6
+
+        # Full DL slots per period.
+        nrofDownlinkSlots: 7
+
+        # DL symbols in the special slot.
+        # Special slot: [DL syms | Guard | UL syms] = 14 symbols total.
+        # 6 DL + 4 guard + 4 UL = 14.
+        # [FIX-12] Original had 10 (2-symbol guard). 4-symbol guard more robust OTA.
+        nrofDownlinkSymbols: 6    # [FIX-12] was: 10
+
+        # Full UL slots per period.
+        nrofUplinkSlots: 2
+
+        # UL symbols in the special slot (after guard).
+        # [FIX-12] Changed from 2 to 4 to match the 6-symbol DL in special slot.
+        nrofUplinkSymbols: 4      # [FIX-12] was: 2
+
+        # SSB TX power (dBm). Broadcast in SIB1. Used by UE for path loss estimate.
+        # [FIX-4] Was commented out in original. Set to -25.
+        ssPBCH_BlockPower: -25    # [FIX-4] was: commented out
+
+    # -------------------------------------------------------------------------
+    # SECTION 3: TRANSPORT & CONNECTIVITY
+    # -------------------------------------------------------------------------
+    SCTP:
+      SCTP_INSTREAMS: 2
+      SCTP_OUTSTREAMS: 2
+
+    amf_ip_address:
+      - ipv4: 192.168.70.132   # AMF N2 interface IP (inside oai-cn Docker network).
+
+    NETWORK_INTERFACES:
+      # [FIX-10] Explicit interface names. Without these, OAI auto-detects and
+      # may bind the wrong interface on a multi-homed host (demo-oai + USRP NIC).
+      GNB_INTERFACE_NAME_FOR_NG_AMF: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NG_AMF: 192.168.70.129
+      GNB_INTERFACE_NAME_FOR_NGU: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NGU: 192.168.70.129
+      GNB_PORT_FOR_S1U: 2152
+
+# =============================================================================
+# SECTION 4: MAC / RLC LAYER
+# =============================================================================
+MACRLCs:
+  - tr_s_preference: local_L1   # Transport to L1: local (monolithic gNB).
+    tr_n_preference: local_RRC  # Transport to RRC: local (monolithic gNB).
+
+    # Target SNR for PUSCH link adaptation (x10: 200 = 20 dB).
+    pusch_TargetSNRx10: 200
+
+    # Target SNR for PUCCH link adaptation (x10: 200 = 20 dB).
+    pucch_TargetSNRx10: 200
+
+    # PRBs with UL SNR below this threshold (dB) are excluded from scheduling.
+    # [FIX-13] Added. Avoids persistent interference on bad PRBs.
+    ul_prbblack_SNR_threshold: 10    # [FIX-13] was: missing
+
+    # Frames of UL silence before UE is considered lost and released.
+    # 5 is a reasonable lab value. 1 causes very aggressive UE drops.
+    ulsch_max_frame_inactivity: 5
+
+    # [FIX-7] Path to ORANSlice NVS scheduler config. Required for slice control.
+    # Without this, OAI uses default scheduler and xApp commands have no effect.
+    SliceConf: "/home/nobre/oranslice2/ORANSlice/rrmPolicy.json"
+
+# =============================================================================
+# SECTION 5: L1 (PHYSICAL LAYER) PROCESSING
+# =============================================================================
+L1s:
+  - tr_n_preference: local_mac   # Transport to MAC: local.
+
+    # PRACH energy detection threshold (linear scale, not dB).
+    # 120 is OAI default. Lower = more false alarms; higher = missed detections.
+    prach_dtx_threshold: 120
+
+    # PUCCH format 0 DTX threshold. Controls PUCCH false-alarm sensitivity.
+    pucch0_dtx_threshold: 100
+
+    # OFDM timing offset divisor. 8 is correct for USRP with 30 kHz SCS.
+    # [FIX-14] Added explicitly.
+    odfm_offset_divisor: 8       # [FIX-14] was: missing
+
+    # Parallel threads for PUSCH (LDPC) decoding.
+    # At 106 PRBs with multiple UEs, PUSCH is the dominant CPU cost per slot.
+    # Set to the number of physical (non-HT) cores on the gNB workstation.
+    pusch_proc_threads: 8        # [FIX-8]
+
+# =============================================================================
+# SECTION 6: RADIO UNIT (RF FRONTEND)
+# =============================================================================
+RUs:
+  - local_rf: yes     # RF is local (not split via eCPRI/FHAPI).
+    nb_tx: 1          # TX antenna count. 1 = SISO.
+    nb_rx: 1          # RX antenna count. 1 = SISO.
+
+    # Software TX/RX attenuation (dB). 0 for OTA.
+    # [FIX-5] Use non-zero only when physical attenuators are in the RF path.
+    att_tx: 0         # [FIX-5] was: 14 in original (cabled bench value, wrong for OTA)
+    att_rx: 0         # [FIX-5] was: 14
+
+    bands: [78]       # NR operating band. Band 78: 3300-3800 MHz TDD.
+
+    # Reference PDSCH signal power for UE path loss calculations (dBm).
+    max_pdschReferenceSignalPower: -27
+
+    # UHD RX gain applied to the daughterboard (dB).
+    # [FIX-15] Original had 114 — risks ADC saturation on SBX Band 78.
+    # Typical operating range for X310 SBX Band 78: 65-80 dB.
+    # Too high → ADC saturation + elevated noise floor.
+    # Too low  → Msg3 / PUSCH decoding failures.
+    max_rxgain: 75    # [FIX-15] was: 114
+
+    eNB_instances: [0]   # Maps this RU to gNB instance 0.
+
+    # UHD device address and configuration string.
+    # [FIX-6] type=x300 prefix required for some UHD versions to select 10 GbE.
+    # clock_source and time_source explicit: use "internal" without OctoClock/GPSDO.
+    # Change to external when Falcon or OctoClock is connected to REF IN.
+    sdr_addrs: "type=x300,addr=192.168.40.2,clock_source=internal,time_source=internal,send_frame_size=8000,recv_frame_size=8000"
+
+    tx_subdev: "B:0"   # X310 TX subdevice (port B, channel 0).
+    rx_subdev: "B:0"   # X310 RX subdevice (port B, channel 0).
+
+# =============================================================================
+# SECTION 7: THREADING  (CRITICAL FOR OTA STABILITY)
+# =============================================================================
+# At 106 PRBs, 30 kHz SCS (slot = 0.5 ms), the gNB must complete the full
+# DL processing chain every 0.5 ms. PARALLEL_SINGLE_THREAD cannot meet this.
+#
+# PARALLEL_SINGLE_THREAD:   OK for rfsim only.
+# PARALLEL_RU_L1_SPLIT:     RU TX/RX separate from L1. Minimum for OTA.
+# PARALLEL_RU_L1_TRX_SPLIT: RU TX and RX also split. Best for heavy OTA load.
+THREAD_STRUCT:
+  - parallel_config: PARALLEL_RU_L1_SPLIT   # [FIX-9] was: PARALLEL_SINGLE_THREAD
+    worker_config: WORKER_ENABLE
+
+# =============================================================================
+# SECTION 8: SECURITY
+# =============================================================================
+security:
+  # Ciphering algorithm preference. First one the UE supports is used.
+  # nea0 = null ciphering (lab/debug — Wireshark-readable).
+  # nea2 = AES-128 (use in production).
+  ciphering_algorithms: [nea0]
+
+  # Integrity protection preference.
+  # nia2 = AES-128 CMAC (mandatory for 5G NR). nia0 = null (fallback).
+  integrity_algorithms: [nia2, nia0]
+
+  # DRB ciphering and integrity. drb_integrity is optional and expensive.
+  drb_ciphering: yes
+  drb_integrity: no
+
+# =============================================================================
+# SECTION 9: LOGGING
+# =============================================================================
+# Log levels: none | error | warn | info | debug | trace
+# debug/trace on phy_log_level or mac_log_level causes huge output and
+# timing misses OTA. Use only for offline post-mortem diagnosis.
+log_config:
+  global_log_level: info
+  hw_log_level: info
+  phy_log_level: info
+  mac_log_level: info
+  rlc_log_level: info
+  pdcp_log_level: info
+  rrc_log_level: info
+  ngap_log_level: debug   # debug: useful for N2 setup and UE registration
+  f1ap_log_level: debug   # debug: useful for CU-DU split troubleshooting

@@ -1,0 +1,96 @@
+# =============================================================================
+# OAI NR-UE Configuration — RFsim
+# =============================================================================
+# Simulated UE that connects to gnb_rfsim.yaml over TCP loopback.
+#
+# Launch:
+#   sudo ./nr-uesoftmodem -O ue_rfsim.yaml --sa --rfsim \
+#     --ueid 0 --nokrnmod
+#
+# Multiple UEs: each instance needs a unique --ueid and unique IMSI.
+# For multiple UEs from a single config, use --ueid 0, 1, 2, ...
+# OAI increments the IMSI automatically based on ueid when using
+# the imsi_base pattern below.
+#
+# For multiple UEs with distinct SIM credentials (different Ki/OPc),
+# each UE needs its own config file or command-line overrides.
+# =============================================================================
+
+# =============================================================================
+# UE IDENTITY & SIM CREDENTIALS
+# These must match the subscriber database in MySQL (oai_db).
+# Check: docker exec mysql mysql -u root -plinux oai_db
+#        -e "SELECT ueid,authenticationMethod FROM AuthenticationSubscription;"
+# =============================================================================
+uicc0:
+  imsi: "001010000000002"   # Must match oai_db AuthenticationSubscription.ueid
+
+  # Authentication key (Ki). Must match oai_db.
+  key: "fec86ba6eb707ed08905757b1bb44b8f"
+
+  # Operator code (OPc, not OP). Must match oai_db.
+  opc: "C42449363BBAD02B66D16BC975D77CC1"
+
+  # Authentication algorithm. milenage is standard for OAI test PLMN.
+  algo: "milenage"
+
+  # AMF field (Authentication Management Field). 0x8000 is standard test value.
+  amf: "0x8000"
+
+  # Requested S-NSSAI (slice). Must match one of the gNB's snssaiList entries
+  # AND the subscriber's SessionManagementSubscriptionData in oai_db.
+  # sst=1, sd=0x00001 matches the first entry in gnb_rfsim.yaml.
+  nssai_sst: 1
+  nssai_sd: "0x00001"
+
+  # DNN (Data Network Name). Must match AMF/SMF config and oai_db.
+  dnn: "oai"
+
+# =============================================================================
+# RFSIM TRANSPORT
+# Must match sdr_addrs in gnb_rfsim.yaml.
+# If gNB and UE are on different hosts, replace 127.0.0.1 with gNB host IP.
+# =============================================================================
+rfsimulator:
+  serveraddr: "127.0.0.1"   # gNB rfsim server address
+  serverport: "4043"         # gNB rfsim port (default 4043)
+  options:                   # Optional channel model flags:
+    - "chanmod"              # enable channel model (adds realistic fading)
+  # modelname: "AWGN"        # channel model: AWGN (default), TDL-A, TDL-C, ...
+  # snr_dB: 20               # SNR in dB when chanmod is enabled
+
+# =============================================================================
+# PHY / L1
+# =============================================================================
+L1s:
+  - tr_n_preference: local_mac
+
+# =============================================================================
+# MAC
+# =============================================================================
+MACRLCs:
+  - tr_s_preference: local_L1
+    tr_n_preference: local_RRC
+
+# =============================================================================
+# THREADING
+# Same reasoning as gNB: PARALLEL_SINGLE_THREAD for rfsim.
+# =============================================================================
+THREAD_STRUCT:
+  - parallel_config: PARALLEL_SINGLE_THREAD
+    worker_config: WORKER_ENABLE
+
+# =============================================================================
+# LOGGING
+# debug on nas_log and rrc_log_level useful for diagnosing attach failures.
+# =============================================================================
+log_config:
+  global_log_level: info
+  hw_log_level: info
+  phy_log_level: info
+  mac_log_level: debug
+  rlc_log_level: info
+  pdcp_log_level: info
+  rrc_log_level: debug    # debug: shows RRC message content on UE side
+  nas_log_level: debug    # debug: shows NAS 5GMM/5GSM procedures on UE side
+  ngap_log_level: info

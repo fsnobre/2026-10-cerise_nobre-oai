@@ -1,0 +1,274 @@
+# =============================================================================
+# OAI gNB Configuration — RFsim (Software Radio Simulation)
+# =============================================================================
+# Derived from gnb_annotated.yaml (OTA config). Changes from OTA are marked
+# with [RFSIM-N] tags. All other parameters are identical to the OTA file —
+# the point is to validate the same config that will run OTA.
+#
+# RFsim replaces the USRP and the air interface with a loopback channel model
+# running in software. The gNB and NR-UE processes connect via TCP (default
+# port 4043) instead of a radio link.
+#
+# What rfsim exercises (same as OTA):
+#   - RRC configuration and SIB1 broadcast
+#   - RACH procedure (Msg1-Msg4), incl. ra_ResponseWindow enum
+#   - NAS/5GMM registration, authentication, PDU session
+#   - Slice/NVS scheduler (SliceConf, rrmPolicy.json)
+#   - E2/KPM/RC xApp interaction (E2 agent configuration unchanged)
+#   - PDCP/RLC/MAC data plane
+#   - Handover signalling (intra-gNB, Xn, N2, RIC-triggered)
+#   - All parameter-level bugs: BWP mismatch, antenna port names, etc.
+#
+# What rfsim does NOT exercise:
+#   - USRP timing jitter → min_rxtxtime sensitivity
+#   - ADC saturation → max_rxgain
+#   - Physical attenuators → att_tx/att_rx
+#   - FPGA image version (XG vs HG) → min_rxtxtime, send/recv_frame_size
+#   - Clock drift → clock_source/time_source
+#   - Real-time scheduling pressure → THREAD_STRUCT matters less
+#   - TDD guard symbol width → nrofDownlinkSymbols/nrofUplinkSymbols
+#   - PTP synchronisation (fronthaul)
+#
+# Launch commands (all on WS-gnb1 or any single workstation):
+#
+#   Step 1 — Core network (WS-CN or localhost with Docker):
+#     cd ~/oai-cn5g && docker compose up -d
+#
+#   Step 2 — gNB:
+#     sudo ./nr-softmodem -O gnb_rfsim.yaml --sa --rfsim
+#
+#   Step 3 — NR-UE (separate terminal, same or different host):
+#     sudo ./nr-uesoftmodem -O ue_rfsim.yaml --sa --rfsim \
+#       --ueid 0 --nokrnmod
+#
+#   Multiple UEs (each in its own terminal):
+#     sudo ./nr-uesoftmodem -O ue_rfsim.yaml --sa --rfsim --ueid 0 --nokrnmod
+#     sudo ./nr-uesoftmodem -O ue_rfsim.yaml --sa --rfsim --ueid 1 --nokrnmod
+#
+# Notes:
+#   --rfsim:   enables software radio loopback (replaces UHD/USRP driver)
+#   --sa:      5G SA mode (not NSA)
+#   --nokrnmod: UE uses TUN interface instead of kernel module (simpler)
+#   --ueid N:  unique ID per UE instance (0, 1, 2, ...) for multi-UE
+#
+# =============================================================================
+
+Active_gNBs:
+  - gnb
+
+Asn1_verbosity: none
+
+# =============================================================================
+# SECTION 1: gNB IDENTITY & CORE CONNECTIVITY
+# Unchanged from OTA — validates same PLMN/slice/TAC config.
+# =============================================================================
+gNBs:
+  - gNB_ID: 0xe00
+    gNB_name: gnb
+    tracking_area_code: 1
+
+    plmn_list:
+      - mcc: 1
+        mnc: 1
+        mnc_length: 2
+        snssaiList:
+          - sst: 1
+            sd: 0x00001
+          - sst: 1
+            sd: 0x000002
+
+    nr_cellid: 12345678
+
+    # [RFSIM-1] min_rxtxtime: no hardware pipeline, but keep value realistic.
+    # rfsim ignores timing jitter so any value works. Keep OTA value (6) to
+    # avoid masking a hypothetical timing misconfiguration.
+    min_rxtxtime: 6    # same as OTA — intentional
+
+    do_SRS: 1
+    do_CSIRS: 1
+    pdsch_AntennaPorts_XP: 1
+    pusch_AntennaPorts: 1
+
+    # =========================================================================
+    # SECTION 2: SERVING CELL CONFIG COMMON
+    # Entirely unchanged from OTA. This is the section most worth validating
+    # in rfsim — BWP, RACH, TDD pattern, SSB all affect attach success.
+    # =========================================================================
+    servingCellConfigCommon:
+      - physCellId: 0
+
+        absoluteFrequencySSB: 640704
+        dl_absoluteFrequencyPointA: 639996
+        dl_offstToCarrier: 0
+        dl_subcarrierSpacing: 1
+        dl_carrierBandwidth: 106
+        initialDLBWPlocationAndBandwidth: 28875
+        initialDLBWPsubcarrierSpacing: 1
+        initialDLBWPcontrolResourceSetZero: 12
+        initialDLBWPsearchSpaceZero: 0
+
+        ul_frequencyBand: 78
+        ul_offstToCarrier: 0
+        ul_subcarrierSpacing: 1
+        ul_carrierBandwidth: 106
+        pMax: 20
+        initialULBWPlocationAndBandwidth: 28875
+        initialULBWPsubcarrierSpacing: 1
+
+        prach_ConfigurationIndex: 98
+        prach_msg1_FDM: 0
+        prach_msg1_FrequencyStart: 0
+        zeroCorrelationZoneConfig: 13
+        preambleReceivedTargetPower: -96
+        preambleTransMax: 6
+        powerRampingStep: 1
+        ra_ResponseWindow: 4
+        ra_ContentionResolutionTimer: 7
+        rsrp_ThresholdSSB: 19
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR: 4
+        ssb_perRACH_OccasionAndCB_PreamblesPerSSB: 14
+        prach_RootSequenceIndex_PR: 2
+        prach_RootSequenceIndex: 1
+        msg1_SubcarrierSpacing: 1
+        restrictedSetConfig: 0
+        msg3_DeltaPreamble: 1
+        p0_NominalWithGrant: -90
+
+        pucchGroupHopping: 0
+        hoppingId: 40
+        p0_nominal: -90
+
+        ssb_PositionsInBurst_Bitmap: 1
+        ssb_PositionsInBurst_PR: 2
+        ssb_periodicityServingCell: 2
+        dmrs_TypeA_Position: 0
+        subcarrierSpacing: 1
+        referenceSubcarrierSpacing: 1
+
+        dl_UL_TransmissionPeriodicity: 6
+        nrofDownlinkSlots: 7
+        nrofDownlinkSymbols: 6
+        nrofUplinkSlots: 2
+        nrofUplinkSymbols: 4
+        ssPBCH_BlockPower: -25
+
+    SCTP:
+      SCTP_INSTREAMS: 2
+      SCTP_OUTSTREAMS: 2
+
+    amf_ip_address:
+      - ipv4: 192.168.70.132
+
+    NETWORK_INTERFACES:
+      GNB_INTERFACE_NAME_FOR_NG_AMF: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NG_AMF: 192.168.70.129
+      GNB_INTERFACE_NAME_FOR_NGU: demo-oai
+      GNB_IPV4_ADDRESS_FOR_NGU: 192.168.70.129
+      GNB_PORT_FOR_S1U: 2152
+
+# =============================================================================
+# SECTION 4: MAC / RLC LAYER
+# Unchanged from OTA. SliceConf validated here.
+# =============================================================================
+MACRLCs:
+  - tr_s_preference: local_L1
+    tr_n_preference: local_RRC
+    pusch_TargetSNRx10: 200
+    pucch_TargetSNRx10: 200
+    ul_prbblack_SNR_threshold: 10
+
+    # [RFSIM-2] ulsch_max_frame_inactivity: increase for rfsim.
+    # In rfsim the UE process may be slower to respond than a real UE due to
+    # CPU scheduling on the same host. A tight value drops the UE before it
+    # completes NAS procedures. 500 frames = 5 seconds of tolerance.
+    # Keep OTA value (5) commented next to it for easy comparison.
+    ulsch_max_frame_inactivity: 500   # [RFSIM-2] OTA value: 5
+
+    SliceConf: "/home/nobre/oranslice2/ORANSlice/rrmPolicy.json"
+
+# =============================================================================
+# SECTION 5: L1 (PHYSICAL LAYER) PROCESSING
+# Unchanged from OTA.
+# =============================================================================
+L1s:
+  - tr_n_preference: local_mac
+    prach_dtx_threshold: 120
+    pucch0_dtx_threshold: 100
+    odfm_offset_divisor: 8
+
+    # [RFSIM-3] pusch_proc_threads: 1 is sufficient for rfsim.
+    # rfsim runs in loopback — no real-time pressure, no parallelism needed.
+    # Using 8 threads wastes CPU and can cause contention on a shared host.
+    # OTA value (8) is in the comment for reference.
+    pusch_proc_threads: 1    # [RFSIM-3] OTA value: 8
+
+# =============================================================================
+# SECTION 6: RADIO UNIT
+# [RFSIM-4] This section changes the most from OTA.
+# sdr_addrs is replaced by rfsim-specific loopback address.
+# max_rxgain is irrelevant but kept for config parity checking.
+# =============================================================================
+RUs:
+  - local_rf: yes     # rfsim still uses local_rf: yes — the --rfsim flag
+                      # at launch overrides the actual hardware driver.
+    nb_tx: 1
+    nb_rx: 1
+    att_tx: 0
+    att_rx: 0
+    bands: [78]
+    max_pdschReferenceSignalPower: -27
+
+    # [RFSIM-4] max_rxgain is not used by rfsim (no real ADC).
+    # Keep the OTA value so the file stays in sync — easy to spot if
+    # someone accidentally runs this config OTA with a wrong gain.
+    max_rxgain: 75     # not used by rfsim; kept for config parity
+
+    eNB_instances: [0]
+
+    # [RFSIM-4] sdr_addrs for rfsim: loopback address.
+    # rfsim gNB listens on 127.0.0.1:4043 by default.
+    # The NR-UE connects to this address.
+    # If running gNB and UE on different hosts, replace 127.0.0.1
+    # with the gNB host IP reachable from the UE host.
+    sdr_addrs: "tcp_server_addr=127.0.0.1"   # [RFSIM-4] OTA value: "type=x300,addr=..."
+
+    # tx_subdev and rx_subdev not needed for rfsim — omitted.
+
+# =============================================================================
+# SECTION 7: THREADING
+# [RFSIM-5] PARALLEL_SINGLE_THREAD is the correct choice for rfsim.
+# rfsim is not real-time — no deadline to meet. The split thread configs
+# add overhead without benefit and can cause hangs on some hosts when
+# the UE and gNB share CPU cores.
+# =============================================================================
+THREAD_STRUCT:
+  - parallel_config: PARALLEL_SINGLE_THREAD   # [RFSIM-5] OTA value: PARALLEL_RU_L1_SPLIT
+    worker_config: WORKER_ENABLE
+
+# =============================================================================
+# SECTION 8: SECURITY
+# Unchanged from OTA.
+# =============================================================================
+security:
+  ciphering_algorithms: [nea0]
+  integrity_algorithms: [nia2, nia0]
+  drb_ciphering: yes
+  drb_integrity: no
+
+# =============================================================================
+# SECTION 9: LOGGING
+# [RFSIM-6] mac_log_level and rlc_log_level elevated to debug.
+# rfsim runs slower than OTA so debug logging does not cause timing misses.
+# Useful for catching MAC scheduling and RLC retransmission issues.
+# Restore to info before moving back to OTA.
+# =============================================================================
+log_config:
+  global_log_level: info
+  hw_log_level: info
+  phy_log_level: info
+  mac_log_level: debug    # [RFSIM-6] OTA value: info — safe to use debug in rfsim
+  rlc_log_level: debug    # [RFSIM-6] OTA value: info
+  pdcp_log_level: info
+  rrc_log_level: info
+  ngap_log_level: debug
+  f1ap_log_level: debug

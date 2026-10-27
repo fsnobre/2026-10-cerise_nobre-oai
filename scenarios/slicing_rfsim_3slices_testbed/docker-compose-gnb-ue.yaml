@@ -1,0 +1,63 @@
+#version: '3.8'
+services:
+    oai-gnb:
+        image: oaisoftwarealliance/oai-gnb:develop
+        #image: oaisoftwarealliance/oai-gnb:v2.1.0
+        privileged: true
+        container_name: rfsim5g-oai-gnb
+        environment: 
+            #RFSIMULATOR: server
+            USE_ADDITIONAL_OPTIONS: -E --rfsim --log_config.global_log_options level,nocolor,time
+        volumes:
+            - ./gnb/gnb.yaml:/opt/oai-gnb/etc/gnb.yaml
+        networks:
+            public_net:
+                ipv4_address: 192.168.70.153
+        healthcheck:
+            test: /bin/bash -c "pgrep nr-softmodem"
+            interval: 10s
+            timeout: 5s
+            retries: 5
+    oai-nr-ue1:
+        image: oaisoftwarealliance/oai-nr-ue:develop
+        #image: oaisoftwarealliance/oai-nr-ue:v2.1.0
+        privileged: true
+        container_name: rfsim5g-oai-nr-ue1
+        environment: 
+            #RFSIMULATOR: 192.168.70.153
+            USE_ADDITIONAL_OPTIONS: -E --rfsim -r 106 --numerology 1 -C 3319680000 --log_config.global_log_options level,nocolor,time
+        depends_on:
+            - oai-gnb
+        volumes:
+            - ./gnb/nr-ue.conf:/opt/oai-nr-ue/etc/nr-ue.conf
+        networks:
+            public_net:
+                ipv4_address: 192.168.70.154
+        healthcheck:
+            test: /bin/bash -c "pgrep nr-uesoftmodem"
+            interval: 10s
+            timeout: 5s
+            retries: 5
+networks:
+    public_net:
+        driver: bridge
+        name: demo-oai-public-net
+        ipam:
+            config:
+                - subnet: 192.168.70.0/24
+        driver_opts:
+            com.docker.network.bridge.name: "demo-oai"
+    public_net_access:
+        name: oai-public-access
+        ipam:
+            config:
+                - subnet: 192.168.72.0/24
+        driver_opts:
+            com.docker.network.bridge.name: "cn5g-access"
+    public_net_core:
+        name: oai-public-core
+        ipam:
+            config:
+                - subnet: 192.168.73.0/24
+        driver_opts:
+            com.docker.network.bridge.name: "cn5g-core"
